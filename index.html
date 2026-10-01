@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Global site tag (gtag.js) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-139175282-1"></script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gracie.tv — @gracielline</title>
+    <meta name="description" content="Official landing page for gracie.tv featuring @gracielline — Valorant, Beat Saber, Tekken, & GW2 streams and highlights.">
+    <style>
+        :root {
+            --bg: #050508;
+            --card-bg: rgba(12, 12, 18, 0.78);
+            --card-border: rgba(255, 42, 95, 0.22);
+            --card-border-hover: rgba(255, 42, 95, 0.55);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-red: #ff2a5f;
+            --accent-gold: #ffd700;
+            --accent-cyan: #00f2fe;
+            --accent-violet: #9d4edd;
+            --glow-red: rgba(255, 42, 95, 0.35);
+            --glow-gold: rgba(255, 215, 0, 0.25);
+            --glow-cyan: rgba(0, 242, 254, 0.25);
+            --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-stack);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .hud-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            background-image: 
+                radial-gradient(circle at 50% 50%, transparent 55%, rgba(5, 5, 8, 0.88) 100%),
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            opacity: 0.85;
+        }
+
+        .corner-tick {
+            position: fixed;
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(255, 42, 95, 0.35);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .corner-tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+        .corner-tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+        .corner-bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+        .corner-br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 440px;
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--card-border);
+            border-radius: 32px;
+            padding: 44px 32px 32px;
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.85),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+                        0 0 35px var(--glow-red);
+            text-align: center;
+            transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--card-border-hover);
+            box-shadow: 0 35px 100px rgba(0, 0, 0, 0.9),
+                        0 0 55px var(--glow-red),
+                        0 0 30px var(--glow-cyan);
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px auto;
+        }
+
+        .avatar-glow-ring {
+            position: absolute;
+            top: -6px; left: -6px; right: -6px; bottom: -6px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-red), var(--accent-cyan), var(--accent-gold));
+            animation: spinGlow 6s linear infinite;
+            filter: blur(8px);
+            opacity: 0.85;
+            z-index: 1;
+        }
+
+        .avatar-ring {
+            position: absolute;
+            top: -3px; left: -3px; right: -3px; bottom: -3px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-red), var(--accent-cyan), var(--accent-violet));
+            z-index: 2;
+        }
+
+        .avatar-img-container {
+            position: relative;
+            z-index: 3;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(12, 12, 18, 0.95);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+        }
+
+        .avatar-img {
+            width: 95%;
+            height: 95%;
+            object-fit: contain;
+            transform: translateY(4px) scale(1.05);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card:hover .avatar-img {
+            transform: translateY(2px) scale(1.12);
+        }
+
+        @keyframes spinGlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 5px 14px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--accent-gold);
+            margin-bottom: 16px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-red);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-red);
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        h1.title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            margin-bottom: 2px;
+            background: linear-gradient(135deg, #ffffff 30%, var(--accent-red) 70%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .handle {
+            font-size: 0.95rem;
+            color: var(--accent-gold);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            margin-bottom: 12px;
+            opacity: 0.9;
+        }
+
+        .bio {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .game-badges {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 28px;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            transition: all 0.25s ease;
+        }
+
+        .badge:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-red);
+            box-shadow: 0 0 10px var(--glow-red);
+        }
+
+        .links {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .link-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .link-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .link-card:hover::before {
+            left: 100%;
+        }
+
+        .link-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .link-icon {
+            width: 22px;
+            height: 22px;
+            fill: var(--text-secondary);
+            transition: fill 0.3s ease, transform 0.3s ease;
+        }
+
+        .arrow-icon {
+            width: 18px;
+            height: 18px;
+            stroke: var(--text-secondary);
+            stroke-width: 2;
+            fill: none;
+            opacity: 0.5;
+            transform: translateX(0);
+            transition: all 0.3s ease;
+        }
+
+        .link-card:hover {
+            background: rgba(255, 42, 95, 0.08);
+            border-color: var(--accent-red);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px -5px var(--glow-red);
+        }
+
+        .link-card:hover .link-icon {
+            fill: var(--accent-red);
+            transform: scale(1.12);
+        }
+
+        .link-card:hover .arrow-icon {
+            opacity: 1;
+            stroke: var(--accent-gold);
+            transform: translateX(5px);
+        }
+
+        footer {
+            margin-top: 32px;
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 0.03em;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 36px 20px 24px;
+            }
+            h1.title {
+                font-size: 2.15rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="hud-overlay"></div>
+    <div class="corner-tick corner-tl"></div>
+    <div class="corner-tick corner-tr"></div>
+    <div class="corner-tick corner-bl"></div>
+    <div class="corner-tick corner-br"></div>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <main class="container">
+        <div class="card">
+            
+            <div class="avatar-wrapper">
+                <div class="avatar-glow-ring"></div>
+                <div class="avatar-ring"></div>
+                <div class="avatar-img-container">
+                    <img src="gracie-small.png" alt="Gracielline Avatar" class="avatar-img" onerror="this.src='https://placehold.co/120x120/ff2a5f/ffffff?text=G'">
+                </div>
+            </div>
+
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                gracie.tv
+            </div>
+
+            <h1 class="title">gracie.tv</h1>
+            <div class="handle">@gracielline</div>
+            <p class="bio">Gamer, streamer & content creator.</p>
+
+            <div class="game-badges">
+                <span class="badge">BEAT SABER</span>
+                <span class="badge">VALORANT</span>
+                <span class="badge">TEKKEN 7</span>
+                <span class="badge">GW2</span>
+            </div>
+
+            <div class="links">
+                <!-- YouTube Link -->
+                <a href="https://www.youtube.com/gracielline" target="_blank" rel="noopener noreferrer" class="link-card">
+                    <div class="link-left">
+                        <svg class="link-icon" viewBox="0 0 24 24">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                        </svg>
+                        <span>YouTube</span>
+                    </div>
+                    <svg class="arrow-icon" viewBox="0 0 24 24">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </a>
+
+                <!-- Instagram Link -->
+                <a href="https://instagram.com/gracielline" target="_blank" rel="noopener noreferrer" class="link-card">
+                    <div class="link-left">
+                        <svg class="link-icon" viewBox="0 0 24 24">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        </svg>
+                        <span>Instagram</span>
+                    </div>
+                    <svg class="arrow-icon" viewBox="0 0 24 24">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+
+            <footer>
+                gracie.tv &bull; all rights reserved
+            </footer>
+        </div>
+    </main>
+
+    <script>
+        (function() {
+            const canvas = document.getElementById('bg-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+
+            let mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+
+            window.addEventListener('mousemove', (e) => {
+                mouse.targetX = e.clientX;
+                mouse.targetY = e.clientY;
+            });
+
+            // Valorant Radianite / Tactical Spark Particles
+            const particles = [];
+            for (let i = 0; i < 45; i++) {
+                particles.push({
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    size: Math.random() * 2.8 + 1,
+                    vx: (Math.random() - 0.5) * 1.4,
+                    vy: (Math.random() - 0.5) * 1.4,
+                    color: Math.random() > 0.45 ? '#ff2a5f' : (Math.random() > 0.5 ? '#00f2fe' : '#ffd700')
+                });
+            }
+
+            // Beat Saber Perspective Floating Rhythm Cubes
+            const saberCubes = [];
+            for (let i = 0; i < 20; i++) {
+                saberCubes.push({
+                    x: (Math.random() - 0.5) * window.innerWidth * 1.5,
+                    y: (Math.random() - 0.5) * window.innerHeight * 1.5,
+                    z: Math.random() * 1000 + 100,
+                    size: Math.random() * 22 + 14,
+                    color: Math.random() > 0.5 ? '#ff2a5f' : '#00f2fe',
+                    rotX: Math.random() * Math.PI * 2,
+                    speed: Math.random() * 2.5 + 1.8
+                });
+            }
+
+            let time = 0;
+
+            function render() {
+                time += 0.02;
+                ctx.fillStyle = '#050508';
+                ctx.fillRect(0, 0, width, height);
+
+                // Mouse smoothing for parallax
+                mouse.x += (mouse.targetX - mouse.x) * 0.05;
+                mouse.y += (mouse.targetY - mouse.y) * 0.05;
+
+                const centerX = width / 2 + (mouse.x - width / 2) * 0.12;
+                const centerY = height / 2 + (mouse.y - height / 2) * 0.12;
+
+                // 1. Tactical Valorant Grid Radar Sweep Line
+                const sweepY = (Math.sin(time * 0.5) * 0.5 + 0.5) * height;
+                ctx.strokeStyle = 'rgba(255, 42, 95, 0.12)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, sweepY);
+                ctx.lineTo(width, sweepY);
+                ctx.stroke();
+
+                // 2. Beat Saber Dual Laser Crossover Slits (Red #ff2a5f & Cyan #00f2fe)
+                ctx.lineWidth = 5;
+                ctx.shadowBlur = 18;
+
+                // Crimson Red Saber Energy Slash
+                ctx.shadowColor = '#ff2a5f';
+                ctx.strokeStyle = '#ff2a5f';
+                ctx.beginPath();
+                ctx.moveTo(0, height * 0.82);
+                ctx.quadraticCurveTo(centerX - 120, centerY + Math.sin(time) * 70, width * 0.65, 0);
+                ctx.stroke();
+
+                // Cyan Saber Energy Slash
+                ctx.shadowColor = '#00f2fe';
+                ctx.strokeStyle = '#00f2fe';
+                ctx.beginPath();
+                ctx.moveTo(width, height * 0.88);
+                ctx.quadraticCurveTo(centerX + 120, centerY - Math.cos(time) * 70, width * 0.35, 0);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0; // Reset shadow for efficiency
+
+                // 3. Floating Beat Saber Cubes with perspective depth
+                for (let c of saberCubes) {
+                    c.z -= c.speed;
+                    if (c.z <= 10) {
+                        c.z = 1000;
+                        c.x = (Math.random() - 0.5) * width * 1.5;
+                        c.y = (Math.random() - 0.5) * height * 1.5;
+                    }
+
+                    const scale = 400 / c.z;
+                    const px = centerX + c.x * scale;
+                    const py = centerY + c.y * scale;
+                    const pSize = c.size * scale;
+
+                    if (px > 0 && px < width && py > 0 && py < height) {
+                        ctx.save();
+                        ctx.translate(px, py);
+                        ctx.rotate(time + c.rotX);
+                        ctx.strokeStyle = c.color;
+                        ctx.lineWidth = 1.5 * scale;
+                        ctx.strokeRect(-pSize / 2, -pSize / 2, pSize, pSize);
+                        ctx.restore();
+                    }
+                }
+
+                // 4. Floating Tactical Particles
+                for (let p of particles) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < 0) p.x = width;
+                    if (p.x > width) p.x = 0;
+                    if (p.y < 0) p.y = height;
+                    if (p.y > height) p.y = 0;
+
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                requestAnimationFrame(render);
+            }
+
+            render();
+        })();
+    </script>
+</body>
+</html>
